@@ -5,17 +5,28 @@
 </head>
 
 <body>
+  <% include partials/_header %>
+  <% if(loggedIn) { %>
   <% for(var shortURL in urls) {
      var longURL = urls[shortURL]
   %>
-  <form method="POST" action="/urls/<%= shortURL %>/delete">
-    <h3>
-      <font color="Blue">
-         <a href="/urls/<%= shortURL %>"><%= shortURL %></a> --> <%= longURL %>
-      </font>
-      <input type="submit" value="delete">
-    </h3>
- </form>
+      <h3>
+        <font color="Blue">
+           <a href="/urls/<%= shortURL %>"><%= shortURL %></a> --> <%= longURL %>
+        </font>
+      </h3>
+
+      <form method="POST" action="/urls/<%= shortURL  %>/delete">
+        <input type="submit" value="delete">
+      </form>
+
+      <form method="GET" action="/urls/<%= shortURL %>">
+        <input type="submit" value="edit">
+      </form>
+  <% } %>
+      <form method="POST" action="/urls">
+        <input type="submit" value="include">
+      </form>
   <% } %>
 </body>
 </html>

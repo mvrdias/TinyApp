@@ -2,14 +2,18 @@
 <html lang="en">
 <head>
   <title>TinyApp</title>
+
 </head>
 <body>
-   <form method="POST" action="/urls/<%= shortURL %>/update">
-    <p>
-      <label for="longURL">Site</label>
-      <input type="text" id="longURL" name="longURL" value="<%= longURL %>" />
-    </p>
-    <button type="submit">Update</button>
-  </form>
+  <% include partials/_header %>
+  <% if(loggedIn) { %>
+    <form method="POST" action="/urls/<%= shortURL %>/update">
+      <p>
+        <label for="longURL">Site</label>
+        <input type="text" id="longURL" name="longURL" value="<%= longURL %>" />
+      </p>
+      <button type="submit">Update</button>
+    </form>
+  <% } %>
 </body>
 </html>

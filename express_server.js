@@ -1,91 +1,144 @@
 
-/*
-
-hello world.
-
-*/
 const express = require("express");
 const bodyParser = require("body-parser");
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
 
 const PORT = process.env.PORT || 8080;
+const COOKIE_NAME = "userId";
 const app = express();
 
-app.use(cookieParser());
-app.use(bodyParser.urlencoded({extended: true}));
-
-// Step by Step - Duration
-// app.use((req, res, next) => {
-//   const ts = new Date().getTime();
-//   next();
-//   const after = ts - new Date().getTime();
-//   console.log('Request took %s ms', after)
-// })
-
-app.set("view engine", "ejs");
-
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "mvrdias@uol.com.br",
+    password: "pass"
+  },
+ "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+  }
+}
 
 var urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
-app.get("/", (req, res) => {
-  res.redirect("/urls");
+app.locals.error = null;
+
+app.use(cookieParser());
+app.use(bodyParser.urlencoded({extended: true}));
+
+app.use(function userMiddleware(req, res, next) {
+  const userId = req.cookies[COOKIE_NAME];
+
+  const user = getUserById(userId);
+
+  req.user = res.locals.user = user;
+
+  res.locals.loggedIn = !!user;
+
+  next();
 });
 
+
+app.set("view engine", "ejs");
+
+
+function createUser(email, password) {
+  const id = generateRandomString(6);
+  const newUser = { email, password, id };
+  users = newUser;
+
+  return newUser;
+}
+
+function authenticate(email, password) {
+  const user = findUserByEmail(email);
+
+  if(!user) { return; }
+  if(user.password !== password) { return; }
+
+  return user;
+}
+
+function findUserByEmail(email) {
+  for(var userId in users) {
+    var user = users[userId];
+    if (user.email === email) {
+      return user;
+    }
+  }
+}
+
+function getUserById(id) {
+  return users[id];
+}
+
+function generateRandomString(tamanho) {
+  var letras = 'ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz';
+  var aleatorio = '';
+  for (var i = 0; i < tamanho; i++) {
+      var rnum = Math.floor(Math.random() * letras.length);
+      aleatorio += letras.substring(rnum, rnum + 1);
+  }
+  return aleatorio;
+}
+
+app.param("shortURL", (req, res, next, shortURL) => {
+  const longURL = urlDatabase[shortURL];
+
+  res.locals.shortURL = shortURL;
+  res.locals.longURL = longURL;
+
+  next();
+});
+
+// const sendJson = (json) => (req, res) => res.json(json);
+
+app.get("/", (req, res) => res.redirect("/urls"));
 //new route handler for "/urls" and use res.render()
 //to pass the URL data to your template.
-app.get("/urls", (req, res) => {
-  let templateVars = {
-    urls: urlDatabase
-  };
-  res.render("urls_index", templateVars);
-});
-
+app.get("/urls", (req, res) => res.render("urls_index", { urls: urlDatabase }));
 // urls_show route
-app.get("/urls/:id", (req, res) => {
-  let shortURL = req.params.id;
-  let longURL  = urlDatabase[shortURL];
-  let templateVars = { shortURL, longURL };
-  res.render("urls_show", templateVars);
-});
-
-
+app.get("/urls/:shortURL", (req, res) => res.render("urls_show"));
 // This code should output any request parameters to your terminal.
-app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
-});
-
-
+app.get("/urls/new", (req, res) => res.render("urls_new"));
 // to handle shortURL requests
-app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
-  // let longURL = ... "/u/:shortURL" that redirects to its longURL ???
-  res.redirect(longURL);
+app.get("/u/:shortURL", (req, res) => res.redirect(res.locals.longURL));
+app.get("/urls.json", (req, res) => res.json(urlDatabase));
+app.get("/users.json", (req, res) => res.json(users));
+
+
+//Register
+
+app.get('/register', (req, res) => res.render('register'));
+
+app.post('/register', (req, res) => {
+  const { email, password } = req.body;
+  const user = createUser(email, password);
+  res.cookie(COOKIE_NAME, user.id);
+  res.redirect('/');
 });
 
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-
-app.post("/urls", (req, res) => {
-  console.log(req.body);  // debug statement to see POST parameters
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
-});
 
 //Login
 app.post("/login", (req, res) => {
-  const user = req.body.username;
-  res.cookie (user);
-  res.redirect("/urls");
+  const { email, password } = req.body;
+  const user = authenticate(email, password);
+  if (!user) {
+    res.render('urls_index', { error: 'Email and Password not found', urls: urlDatabase });
+  } else {
+    res.cookie('userId', user.id);
+    res.redirect('/urls');
+  }
 });
+
 
 //Logout
 app.post("/logout", (req, res) => {
-  // cookie ?
+  res.clearCookie(COOKIE_NAME);
   res.redirect("/urls");
 });
 
@@ -95,6 +148,15 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   delete urlDatabase[shortURL];
   res.redirect("/urls");
 });
+
+// New Informations
+app.post("/urls", (req, res) => {
+  const newURL  = req.body.longURL;
+  const shortURL = generateRandomString(6);
+  urlDatabase[shortURL] = newURL;
+  res.redirect("/urls");
+});
+
 
 
 //Update Informations
@@ -108,14 +170,3 @@ app.post("/urls/:shortURL/update", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-
-
-function generateRandomString() {
-  var letras = 'ABCDEFGHIJKLMNOPQRSTUVWXTZabcdefghiklmnopqrstuvwxyz';
-  var aleatorio = '';
-  for (var i = 0; i < tamanho; i++) {
-      var rnum = Math.floor(Math.random() * letras.length);
-      aleatorio += letras.substring(rnum, rnum + 1);
-  }
-  return aleatorio;
-}
