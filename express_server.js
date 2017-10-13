@@ -21,8 +21,15 @@ const users = {
 }
 
 var urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": {
+    usId: "xxxxxx",
+    longURL: "http://www.lighthouselabs.ca"
+  },
+
+  "9sm5xK": {
+    usId:"yyyyyy",
+    longURL: "http://www.google.com"
+  }
 };
 
 app.locals.error = null;
@@ -32,13 +39,9 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 app.use(function userMiddleware(req, res, next) {
   const userId = req.cookies[COOKIE_NAME];
-
   const user = getUserById(userId);
-
   req.user = res.locals.user = user;
-
   res.locals.loggedIn = !!user;
-
   next();
 });
 
@@ -95,33 +98,35 @@ app.param("shortURL", (req, res, next, shortURL) => {
   next();
 });
 
-// const sendJson = (json) => (req, res) => res.json(json);
 
 app.get("/", (req, res) => res.redirect("/urls"));
-//new route handler for "/urls" and use res.render()
-//to pass the URL data to your template.
+
+//new route handler for "/urls" and use res.render() to pass the URL data to your template.
 app.get("/urls", (req, res) => res.render("urls_index", { urls: urlDatabase }));
-// urls_show route
-app.get("/urls/:shortURL", (req, res) => res.render("urls_show"));
+
 // This code should output any request parameters to your terminal.
 app.get("/urls/new", (req, res) => res.render("urls_new"));
+
+// urls_show route
+app.get("/urls/:shortURL", (req, res) => res.render("urls_show"));
+
 // to handle shortURL requests
 app.get("/u/:shortURL", (req, res) => res.redirect(res.locals.longURL));
+
 app.get("/urls.json", (req, res) => res.json(urlDatabase));
+
 app.get("/users.json", (req, res) => res.json(users));
-
-
-//Register
 
 app.get('/register', (req, res) => res.render('register'));
 
+
+//Register
 app.post('/register', (req, res) => {
   const { email, password } = req.body;
   const user = createUser(email, password);
   res.cookie(COOKIE_NAME, user.id);
   res.redirect('/');
 });
-
 
 //Login
 app.post("/login", (req, res) => {
@@ -134,7 +139,6 @@ app.post("/login", (req, res) => {
     res.redirect('/urls');
   }
 });
-
 
 //Logout
 app.post("/logout", (req, res) => {
@@ -151,13 +155,14 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 // New Informations
 app.post("/urls", (req, res) => {
+  console.log('Cookies: ', req.cookies)
   const newURL  = req.body.longURL;
   const shortURL = generateRandomString(6);
-  urlDatabase[shortURL] = newURL;
+  urlDatabase[shortURL] = {};
+  urlDatabase[shortURL].longURL = newURL;
+  urlDatabase[shortURL].usId = req.cookies.userId;
   res.redirect("/urls");
 });
-
-
 
 //Update Informations
 app.post("/urls/:shortURL/update", (req, res) => {
