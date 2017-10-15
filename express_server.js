@@ -1,9 +1,17 @@
+
+/*
+
+hello world.
+
+*/
 const express = require("express");
 const bodyParser = require("body-parser");
+const cookieParser = require('cookie-parser')
 
-var PORT = process.env.PORT || 8080;
-var app = express();
+const PORT = process.env.PORT || 8080;
+const app = express();
 
+app.use(cookieParser());
 app.use(bodyParser.urlencoded({extended: true}));
 
 // Step by Step - Duration
@@ -15,6 +23,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 // })
 
 app.set("view engine", "ejs");
+
 
 var urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -48,10 +57,6 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-app.post("/urls", (req, res) => {
-  console.log(req.body);  // debug statement to see POST parameters
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
-});
 
 // to handle shortURL requests
 app.get("/u/:shortURL", (req, res) => {
@@ -65,6 +70,24 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+
+app.post("/urls", (req, res) => {
+  console.log(req.body);  // debug statement to see POST parameters
+  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+});
+
+//Login
+app.post("/login", (req, res) => {
+  const user = req.body.username;
+  res.cookie (user);
+  res.redirect("/urls");
+});
+
+//Logout
+app.post("/logout", (req, res) => {
+  // cookie ?
+  res.redirect("/urls");
+});
 
 //Delete Informations
 app.post("/urls/:shortURL/delete", (req, res) => {
