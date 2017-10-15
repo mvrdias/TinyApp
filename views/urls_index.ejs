@@ -4,17 +4,17 @@
   <title>TinyApp</title>
 </head>
 
-<body>
-  <% include partials/_header %>
-  <% if(loggedIn) { %>
-  <% for(var shortURL in urls) {
-     var longURL = urls[shortURL]
-  %>
-      <h3>
+<body style="font-size:20px; padding:50px;">
+    <% include partials/_header %>
+    <% if(loggedIn) { %>
+    <% for(var shortURL in urls) {
+       var longURL = urls[shortURL].longURL
+    %>
+      <h4>
         <font color="Blue">
-           <a href="/urls/<%= shortURL %>"><%= shortURL %></a> --> <%= longURL %>
+           <%= shortURL %> --> <%= longURL %>
         </font>
-      </h3>
+      </h4>
 
       <form method="POST" action="/urls/<%= shortURL  %>/delete">
         <input type="submit" value="delete">
@@ -23,10 +23,11 @@
       <form method="GET" action="/urls/<%= shortURL %>">
         <input type="submit" value="edit">
       </form>
-  <% } %>
-      <form method="POST" action="/urls">
-        <input type="submit" value="include">
-      </form>
-  <% } %>
+
+    <% } %>
+    <pre width="2o">
+    </pre>
+    <a href="/urls/new">New URL - Click here to add</a>
+    <% } %>
 </body>
 </html>

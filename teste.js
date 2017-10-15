@@ -9,3 +9,8 @@ function textoAleatorio(tamanho)
     return aleatorio;
 }
 console.log(textoAleatorio (6));
+
+
+
+
+

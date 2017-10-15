@@ -2,6 +2,11 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
+
+//const password = "purple-monkey-dinosaur"; // you will probably this from req.params
+//const hashedPassword = bcrypt.hashSync(password, 10);
+
 
 const PORT = process.env.PORT || 8080;
 const COOKIE_NAME = "userId";
@@ -11,12 +16,12 @@ const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "mvrdias@uol.com.br",
-    password: "pass"
+    password: bcrypt.hashSync("pass", 10)
   },
  "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: bcrypt.hashSync("dishwasher-funk", 10)
   }
 }
 
@@ -50,18 +55,20 @@ app.set("view engine", "ejs");
 
 
 function createUser(email, password) {
-  const id = generateRandomString(6);
-  const newUser = { email, password, id };
-  users = newUser;
 
-  return newUser;
+    const id = generateRandomString(6);
+    const newUser = {id , email, password};
+    users[id] = newUser;
+    return users[id];
+
 }
 
 function authenticate(email, password) {
   const user = findUserByEmail(email);
 
   if(!user) { return; }
-  if(user.password !== password) { return; }
+  //if(user.password !== password) { return; }
+  if (!bcrypt.compareSync(password, user.password)) {return;}
 
   return user;
 }
@@ -69,7 +76,7 @@ function authenticate(email, password) {
 function findUserByEmail(email) {
   for(var userId in users) {
     var user = users[userId];
-    if (user.email === email) {
+    if ((user.email === email) || (email ==="")) {
       return user;
     }
   }
@@ -108,7 +115,16 @@ app.get("/urls", (req, res) => res.render("urls_index", { urls: urlDatabase }));
 app.get("/urls/new", (req, res) => res.render("urls_new"));
 
 // urls_show route
-app.get("/urls/:shortURL", (req, res) => res.render("urls_show"));
+app.get("/urls/:shortURL", (req, res) => {
+  let longURL = urlDatabase[req.params.shortURL].longURL;
+  let shortURL = req.params.shortURL;
+  let data = {
+    longURL: longURL,
+    shortURL: shortURL
+  };
+  console.log(data);
+  res.render("urls_show",data);
+});
 
 // to handle shortURL requests
 app.get("/u/:shortURL", (req, res) => res.redirect(res.locals.longURL));
@@ -122,10 +138,27 @@ app.get('/register', (req, res) => res.render('register'));
 
 //Register
 app.post('/register', (req, res) => {
-  const { email, password } = req.body;
-  const user = createUser(email, password);
-  res.cookie(COOKIE_NAME, user.id);
-  res.redirect('/');
+  //const { email, password } = req.body;
+  var email = req.body.email;
+  var passprel = req.body.password;
+  var password = bcrypt.hashSync(passprel, 10);
+
+
+  const user = findUserByEmail(email);
+  //console.log(user);
+  if(user){
+    //Email already exists
+    //res.send("Email already registered. Try again");
+    res.redirect('/urls');
+
+  } else{
+    //New User Registration can be done here
+    //console.log("we can register");
+    let newUser = createUser(email,password);
+    res.cookie('userId', newUser.id);
+    res.redirect('/urls');
+  }
+
 });
 
 //Login
@@ -161,6 +194,7 @@ app.post("/urls", (req, res) => {
   urlDatabase[shortURL] = {};
   urlDatabase[shortURL].longURL = newURL;
   urlDatabase[shortURL].usId = req.cookies.userId;
+  //console.log('id do site', urlDatabase[shortURL].usId);
   res.redirect("/urls");
 });
 
@@ -168,7 +202,8 @@ app.post("/urls", (req, res) => {
 app.post("/urls/:shortURL/update", (req, res) => {
   const shortURL = req.params.shortURL;
   const newURL  = req.body.longURL;
-  urlDatabase[shortURL] = newURL;
+  urlDatabase[shortURL] = {};
+  urlDatabase[shortURL].longURL = newURL;
   res.redirect("/urls");
 });
 
