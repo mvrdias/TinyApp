@@ -7,8 +7,11 @@
 <body style="font-size:20px; padding:50px;">
     <% include partials/_header %>
     <% if(loggedIn) { %>
+
     <% for(var shortURL in urls) {
-       var longURL = urls[shortURL].longURL
+       if(user.id===urls[shortURL].usId) {
+        var longURL = urls[shortURL].longURL
+
     %>
       <h4>
         <font color="Blue">
@@ -23,6 +26,8 @@
       <form method="GET" action="/urls/<%= shortURL %>">
         <input type="submit" value="edit">
       </form>
+
+    <% } %>
 
     <% } %>
     <pre width="2o">

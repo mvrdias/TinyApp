@@ -22,19 +22,39 @@ const users = {
     id: "user2RandomID",
     email: "user2@example.com",
     password: bcrypt.hashSync("dishwasher-funk", 10)
+  },
+  "rohitdhand": {
+    id: "rohitdhand",
+    email: "dhandrohit@gmail.com",
+    password: bcrypt.hashSync("test123", 10)
   }
 }
 
 var urlDatabase = {
   "b2xVn2": {
-    usId: "xxxxxx",
+    usId: "user2RandomID",
     longURL: "http://www.lighthouselabs.ca"
   },
 
   "9sm5xK": {
-    usId:"yyyyyy",
+    usId:"user2RandomID",
     longURL: "http://www.google.com"
+  },
+
+  "123": {
+    usId:"rohitdhand",
+    longURL: "http://www.google.com"
+  },
+  "345": {
+    usId:"rohitdhand",
+    longURL: "http://www.microsoft.com"
+  },
+  "567": {
+    usId:"rohitdhand",
+    longURL: "http://www.facebook.com"
   }
+
+
 };
 
 app.locals.error = null;
@@ -166,7 +186,9 @@ app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const user = authenticate(email, password);
   if (!user) {
-    res.render('urls_index', { error: 'Email and Password not found', urls: urlDatabase });
+    console.log("user not found or password not matching");
+    res.send('user not found');
+    //res.render('urls_index', { error: 'Email and Password not found', urls: urlDatabase });
   } else {
     res.cookie('userId', user.id);
     res.redirect('/urls');
