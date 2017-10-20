@@ -4,18 +4,35 @@
   <title>TinyApp</title>
 </head>
 
-<body>
-  <% for(var shortURL in urls) {
-     var longURL = urls[shortURL]
-  %>
-  <form method="POST" action="/urls/<%= shortURL %>/delete">
-    <h3>
-      <font color="Blue">
-         <a href="/urls/<%= shortURL %>"><%= shortURL %></a> --> <%= longURL %>
-      </font>
-      <input type="submit" value="delete">
-    </h3>
- </form>
-  <% } %>
+<body style="font-size:20px; padding:50px;">
+    <% include partials/_header %>
+    <% if(loggedIn) { %>
+
+    <% for(var shortURL in urls) {
+       if(user.id===urls[shortURL].usId) {
+        var longURL = urls[shortURL].longURL
+
+    %>
+      <h4>
+        <font color="Blue">
+           <%= shortURL %> --> <%= longURL %>
+        </font>
+      </h4>
+
+      <form method="POST" action="/urls/<%= shortURL  %>/delete">
+        <input type="submit" value="delete">
+      </form>
+
+      <form method="GET" action="/urls/<%= shortURL %>">
+        <input type="submit" value="edit">
+      </form>
+
+    <% } %>
+
+    <% } %>
+    <pre width="2o">
+    </pre>
+    <a href="/urls/new">New URL - Click here to add</a>
+    <% } %>
 </body>
 </html>
