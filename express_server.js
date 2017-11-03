@@ -3,11 +3,6 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
-
-//const password = "purple-monkey-dinosaur"; // you will probably this from req.params
-//const hashedPassword = bcrypt.hashSync(password, 10);
-
-
 const PORT = process.env.PORT || 8080;
 const COOKIE_NAME = "userId";
 const app = express();
@@ -59,7 +54,7 @@ var urlDatabase = {
 
 app.locals.error = null;
 
-app.use(cookieParser());
+app.use(cookieParser(["project03", "Cookiess"]));
 app.use(bodyParser.urlencoded({extended: true}));
 
 app.use(function userMiddleware(req, res, next) {
@@ -75,21 +70,17 @@ app.set("view engine", "ejs");
 
 
 function createUser(email, password) {
-
-    const id = generateRandomString(6);
-    const newUser = {id , email, password};
-    users[id] = newUser;
-    return users[id];
+  const id = generateRandomString(6);
+  const newUser = {id , email, password};
+  users[id] = newUser;
+  return users[id];
 
 }
 
 function authenticate(email, password) {
   const user = findUserByEmail(email);
-
   if(!user) { return; }
-  //if(user.password !== password) { return; }
   if (!bcrypt.compareSync(password, user.password)) {return;}
-
   return user;
 }
 
@@ -100,6 +91,16 @@ function findUserByEmail(email) {
       return user;
     }
   }
+}
+
+function verifyshortURLIdByUser(userId, shortId){ // delete and update url
+  var flag = false;
+  for(var shortId in urlDatabase) {
+    if ((urlDatabase[shortId].usId === userId) && (shortId===shortId)) {
+      flag = true;
+    }
+  }
+  return flag;
 }
 
 function getUserById(id) {
@@ -118,10 +119,8 @@ function generateRandomString(tamanho) {
 
 app.param("shortURL", (req, res, next, shortURL) => {
   const longURL = urlDatabase[shortURL];
-
   res.locals.shortURL = shortURL;
   res.locals.longURL = longURL;
-
   next();
 });
 
@@ -142,12 +141,13 @@ app.get("/urls/:shortURL", (req, res) => {
     longURL: longURL,
     shortURL: shortURL
   };
-  console.log(data);
   res.render("urls_show",data);
 });
 
 // to handle shortURL requests
-app.get("/u/:shortURL", (req, res) => res.redirect(res.locals.longURL));
+app.get("/u/:shortURL", (req, res) => {
+  res.redirect(urlDatabase[req.params.shortURL].longURL);
+});
 
 app.get("/urls.json", (req, res) => res.json(urlDatabase));
 
@@ -158,37 +158,28 @@ app.get('/register', (req, res) => res.render('register'));
 
 //Register
 app.post('/register', (req, res) => {
-  //const { email, password } = req.body;
   var email = req.body.email;
   var passprel = req.body.password;
   var password = bcrypt.hashSync(passprel, 10);
 
-
   const user = findUserByEmail(email);
-  //console.log(user);
   if(user){
-    //Email already exists
-    //res.send("Email already registered. Try again");
     res.redirect('/urls');
-
-  } else{
+  } else {
     //New User Registration can be done here
-    //console.log("we can register");
     let newUser = createUser(email,password);
     res.cookie('userId', newUser.id);
     res.redirect('/urls');
   }
-
 });
 
 //Login
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const user = authenticate(email, password);
+
   if (!user) {
-    console.log("user not found or password not matching");
-    res.send('user not found');
-    //res.render('urls_index', { error: 'Email and Password not found', urls: urlDatabase });
+    res.send('user not found or password not matching');
   } else {
     res.cookie('userId', user.id);
     res.redirect('/urls');
@@ -203,31 +194,55 @@ app.post("/logout", (req, res) => {
 
 //Delete Informations
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL];
-  res.redirect("/urls");
+
+  if(!req.cookies["userId"]){
+    res.send('Sorry! You cant delete the TinyURL. You need to Login First');
+  } else {
+      var userId = req.cookies["userId"];
+      var shortId = req.params.shortURL;
+      var flag = (userId, shortId);
+
+    if(flag){
+      const shortURL = req.params.shortURL;
+      delete urlDatabase[shortURL];
+      res.redirect("/urls");
+    } else {
+      res.redirect("/urls");
+    }
+  }
 });
 
 // New Informations
 app.post("/urls", (req, res) => {
-  console.log('Cookies: ', req.cookies)
   const newURL  = req.body.longURL;
   const shortURL = generateRandomString(6);
   urlDatabase[shortURL] = {};
   urlDatabase[shortURL].longURL = newURL;
   urlDatabase[shortURL].usId = req.cookies.userId;
-  //console.log('id do site', urlDatabase[shortURL].usId);
   res.redirect("/urls");
 });
 
 //Update Informations
 app.post("/urls/:shortURL/update", (req, res) => {
-  const shortURL = req.params.shortURL;
-  const newURL  = req.body.longURL;
-  urlDatabase[shortURL] = {};
-  urlDatabase[shortURL].longURL = newURL;
-  res.redirect("/urls");
+
+  if (!req.cookies["userId"]) {
+    res.send('Sorry! You cant delete the TinyURL. You need to Login First');
+  } else {
+    var userId = req.cookies["userId"];
+    var shortId = req.params.shortURL;
+    //const shortURL = req.params.shortURL;
+    const newURL  = req.body.longURL;
+    var flag = verifyshortURLIdByUser(userId, shortId);
+
+    if(flag){
+      urlDatabase[shortId].longURL = newURL;
+      res.redirect("/urls");
+    } else {
+      res.redirect("/urls");
+    }
+  }
 });
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
