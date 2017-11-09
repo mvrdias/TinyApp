@@ -13,16 +13,6 @@ const users = {
     email: "mvrdias@uol.com.br",
     password: bcrypt.hashSync("pass", 10)
   },
- "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: bcrypt.hashSync("dishwasher-funk", 10)
-  },
-  "rohitdhand": {
-    id: "rohitdhand",
-    email: "dhandrohit@gmail.com",
-    password: bcrypt.hashSync("test123", 10)
-  }
 }
 
 var urlDatabase = {
@@ -30,26 +20,6 @@ var urlDatabase = {
     usId: "user2RandomID",
     longURL: "http://www.lighthouselabs.ca"
   },
-
-  "9sm5xK": {
-    usId:"user2RandomID",
-    longURL: "http://www.google.com"
-  },
-
-  "123": {
-    usId:"rohitdhand",
-    longURL: "http://www.google.com"
-  },
-  "345": {
-    usId:"rohitdhand",
-    longURL: "http://www.microsoft.com"
-  },
-  "567": {
-    usId:"rohitdhand",
-    longURL: "http://www.facebook.com"
-  }
-
-
 };
 
 app.locals.error = null;
@@ -58,7 +28,7 @@ app.use(cookieParser(["project03", "Cookiess"]));
 app.use(bodyParser.urlencoded({extended: true}));
 
 app.use(function userMiddleware(req, res, next) {
-  const userId = req.cookies[COOKIE_NAME];
+  const userId = req.signedCookies[COOKIE_NAME];
   const user = getUserById(userId);
   req.user = res.locals.user = user;
   res.locals.loggedIn = !!user;
@@ -94,13 +64,7 @@ function findUserByEmail(email) {
 }
 
 function verifyshortURLIdByUser(userId, shortId){ // delete and update url
-  var flag = false;
-  for(var shortId in urlDatabase) {
-    if ((urlDatabase[shortId].usId === userId) && (shortId===shortId)) {
-      flag = true;
-    }
-  }
-  return flag;
+  return urlDatabase[shortId] && urlDatabase[shortId].usId === userId;
 }
 
 function getUserById(id) {
@@ -115,6 +79,25 @@ function generateRandomString(tamanho) {
       aleatorio += letras.substring(rnum, rnum + 1);
   }
   return aleatorio;
+}
+
+function mustBeLoggedIn(req, res, next) {
+  if(req.user) {
+    return next();
+  }
+
+  res.send("You are not logged in");
+}
+
+function mustOwnShortUrl(req, res, next) {
+  const userId = req.user.id;
+  const longURL = res.locals.longURL;
+
+  if(longURL.usId !== userId) {
+    res.send("This does not belong to you");
+    return;
+  }
+  next();
 }
 
 app.param("shortURL", (req, res, next, shortURL) => {
@@ -168,7 +151,7 @@ app.post('/register', (req, res) => {
   } else {
     //New User Registration can be done here
     let newUser = createUser(email,password);
-    res.cookie('userId', newUser.id);
+    res.cookie('userId', newUser.id, { signed: true });
     res.redirect('/urls');
   }
 });
@@ -181,7 +164,7 @@ app.post("/login", (req, res) => {
   if (!user) {
     res.send('user not found or password not matching');
   } else {
-    res.cookie('userId', user.id);
+    res.cookie('userId', user.id, { signed: true });
     res.redirect('/urls');
   }
 });
@@ -193,56 +176,37 @@ app.post("/logout", (req, res) => {
 });
 
 //Delete Informations
-app.post("/urls/:shortURL/delete", (req, res) => {
+app.post("/urls/:shortURL/delete", mustBeLoggedIn, mustOwnShortUrl, (req, res) => {
 
-  if(!req.cookies["userId"]){
-    res.send('Sorry! You cant delete the TinyURL. You need to Login First');
-  } else {
-      var userId = req.cookies["userId"];
-      var shortId = req.params.shortURL;
-      var flag = (userId, shortId);
+  var shortId = req.params.shortURL;
+  delete urlDatabase[shortId];
 
-    if(flag){
-      const shortURL = req.params.shortURL;
-      delete urlDatabase[shortURL];
-      res.redirect("/urls");
-    } else {
-      res.redirect("/urls");
-    }
-  }
+  res.redirect("/urls");
+
 });
 
 // New Informations
-app.post("/urls", (req, res) => {
+app.post("/urls", mustBeLoggedIn, (req, res) => {
+
   const newURL  = req.body.longURL;
   const shortURL = generateRandomString(6);
   urlDatabase[shortURL] = {};
   urlDatabase[shortURL].longURL = newURL;
-  urlDatabase[shortURL].usId = req.cookies.userId;
+  urlDatabase[shortURL].usId = req.user.id;
   res.redirect("/urls");
+
 });
 
 //Update Informations
-app.post("/urls/:shortURL/update", (req, res) => {
+app.post("/urls/:shortURL/update", mustBeLoggedIn, mustOwnShortUrl, (req, res) => {
 
-  if (!req.cookies["userId"]) {
-    res.send('Sorry! You cant delete the TinyURL. You need to Login First');
-  } else {
-    var userId = req.cookies["userId"];
-    var shortId = req.params.shortURL;
-    //const shortURL = req.params.shortURL;
-    const newURL  = req.body.longURL;
-    var flag = verifyshortURLIdByUser(userId, shortId);
+  var shortId = req.params.shortURL;
+  const newURL  = req.body.longURL;
 
-    if(flag){
-      urlDatabase[shortId].longURL = newURL;
-      res.redirect("/urls");
-    } else {
-      res.redirect("/urls");
-    }
-  }
+  urlDatabase[shortId].longURL = newURL;
+  res.redirect("/urls");
+
 });
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
